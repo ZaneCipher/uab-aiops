@@ -1,0 +1,7 @@
+.env
+certs/*.key
+certs/*.pem
+node_modules/
+dashboard/node_modules/
+dashboard/dist/
+agent-rust/target/

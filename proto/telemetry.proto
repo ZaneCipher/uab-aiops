@@ -1,0 +1,23 @@
+syntax = "proto3";
+package uab_aiops;
+
+service TelemetryService {
+  rpc StreamTelemetry (TelemetryData) returns (CommandResponse);
+}
+
+message TelemetryData {
+  string hostname = 1;
+  string lab = 2;
+  string ip = 3;
+  float cpu_agent = 4;
+  float ram_mb = 5;
+  int32 ssd_health = 6;
+  int32 ssd_temp = 7;
+  int32 whea_errors = 8;
+  string drift_status = 9;
+}
+
+message CommandResponse {
+  string action = 1;
+  string message = 2;
+}
