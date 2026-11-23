@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: uab_aiops_db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  orchestrator:
+    build: ./orchestrator
+    container_name: uab_aiops_orchestrator
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_USER=${ADMIN_USER}
+      - ADMIN_PASS=${ADMIN_PASS}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+    ports:
+      - "127.0.0.1:4000:4000"
+      - "50051:50051"
+    volumes:
+      - ./certs:/certs:ro
+      - ./proto:/proto:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  dashboard:
+    build: ./dashboard
+    container_name: uab_aiops_dashboard
+    ports:
+      - "127.0.0.1:5173:5173"
+    depends_on:
+      - orchestrator
+
+volumes:
+  pgdata:
