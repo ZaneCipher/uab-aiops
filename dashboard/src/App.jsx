@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Shield, Cpu, HardDrive, Activity, RefreshCw, ShieldAlert, CheckCircle2, Terminal, Server, Lock, History, LogOut } from 'lucide-react';
 
-const API_URL = 'http://localhost:4000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 function TempChart({ history }) {
   if (!history || history.length < 2) {
@@ -36,8 +36,8 @@ function TempChart({ history }) {
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('uab_token') || '');
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('uab2026');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
   const [endpoints, setEndpoints] = useState([]);
@@ -48,10 +48,15 @@ export default function App() {
   const [filterLab, setFilterLab] = useState('TODOS');
   const [toast, setToast] = useState('');
 
-  const authHeaders = {
+  const authHeaders = useMemo(() => ({
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`,
-  };
+  }), [token]);
+
+  const selectedHostRef = useRef(null);
+  useEffect(() => {
+    selectedHostRef.current = selected?.hostname || null;
+  }, [selected?.hostname]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -78,21 +83,27 @@ export default function App() {
     setSelected(null);
   };
 
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
     if (!token) return;
     try {
       const [epRes, audRes] = await Promise.all([
         fetch(`${API_URL}/endpoints`, { headers: authHeaders }),
         fetch(`${API_URL}/audit`, { headers: authHeaders }),
       ]);
-      if (epRes.status === 401 || audRes.status === 401) return logout();
+      if (epRes.status === 401 || audRes.status === 401) {
+        localStorage.removeItem('uab_token');
+        setToken('');
+        setEndpoints([]);
+        setSelected(null);
+        return;
+      }
 
       const data = await epRes.json();
       const audData = await audRes.json();
       setEndpoints(data);
       setAuditLogs(audData);
 
-      let activeHost = selected?.hostname;
+      let activeHost = selectedHostRef.current;
       if (!activeHost && data.length > 0) {
         activeHost = data[0].hostname;
         setSelected(data[0]);
@@ -108,14 +119,15 @@ export default function App() {
     } catch (e) {
       console.error('Error sincronizando con backend:', e);
     }
-  };
+  }, [token, authHeaders]);
 
   useEffect(() => {
     if (!token) return;
+    // oxlint-disable-next-line react/set-state-in-effect
     fetchAll();
     const id = setInterval(fetchAll, 2000);
     return () => clearInterval(id);
-  }, [token, selected?.hostname]);
+  }, [token, fetchAll]);
 
   const sendCommand = async (hostname, action) => {
     const res = await fetch(`${API_URL}/command/${encodeURIComponent(hostname)}`, {

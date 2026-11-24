@@ -1,7 +1,23 @@
 .env
+.env.*
+!.env.example
+
+# Claves y artefactos privados: NUNCA commitear
 certs/*.key
 certs/*.pem
+certs/*.csr
+certs/*.srl
+certs/*.ext
+certs/*.cnf
+certs/**/*.key
+certs/**/*.csr
+certs/**/*.ext
+agente-windows/
+*.exe
+*.pfx
+
 node_modules/
-dashboard/node_modules/
+**/node_modules/
 dashboard/dist/
 agent-rust/target/
+dist/
